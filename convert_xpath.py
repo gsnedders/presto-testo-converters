@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import sys
@@ -6,7 +7,7 @@ from lxml import etree
 
 tests = {}
 
-def process_file(name):
+def process_file(name, out_dir):
     tree = etree.parse(name)
     xpath = tree.xpath("//xsl:when/@test",
                        namespaces={"xsl": "http://www.w3.org/1999/XSL/Transform"})
@@ -26,19 +27,22 @@ def process_file(name):
     new = os.path.basename(name)
     tests[new] = xpath
 
-    with open("new/" + new, "wb") as fp:
+    with open(os.path.join(out_dir, new), "wb") as fp:
         fp.write(etree.tostring(test_xml[0][0], encoding="utf-8"))
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("needs more args")
-        sys.exit(2)
+    parser = argparse.ArgumentParser(description='Convert XPath tests.')
+    parser.add_argument('in_dir', metavar='IN', help='path to presto-testo XPath tests')
+    parser.add_argument('out_dir', metavar='OUT', default="new",
+                        help='path to output new XPath tests')
 
-    d = sys.argv[1]
+    args = parser.parse_args()
+
+    d = args.in_dir
     files = os.listdir(d)
     for f in files:
         if f.endswith(".xml") and f != "ref.xml":
-            process_file(os.path.join(d, f))
+            process_file(os.path.join(d, f), args.out_dir)
 
-    with open("new/tests.json", "w") as fp:
+    with open(os.path.join(args.out_dir, "tests.json"), "w") as fp:
         json.dump(tests, fp, indent=4)
